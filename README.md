@@ -1,4 +1,7 @@
-# domlivo-bot
+# domlivo-telegram-bot
+
+Production repo: **https://github.com/cyanidium-dev/domlivo-telegram-bot** (since 2026-09-05;
+the earlier `kulakaa073/domlivo-bot` is frozen). Symlinked into `domlivo-workspace` as `bot/`.
 
 Telegram property-intake bot for DomLivo. Agents DM the bot an album of photos
 with the listing text as the caption; the bot parses it with one Claude call,
@@ -48,6 +51,9 @@ The webhook must be registered with `allowed_updates: ['message',
 dead until `npm run set-webhook` has been re-run after the review-flow deploy.
 
 ## Deploy
+
+The Vercel project (`domlivo-bot`) deploys `main` of this repo on push once its Git
+integration points here. Manual fallback:
 
 ```
 npx vercel --prod

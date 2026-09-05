@@ -1,7 +1,13 @@
 {
-  "name": "domlivo-bot",
+  "name": "domlivo-telegram-bot",
   "version": "0.1.0",
   "private": true,
+  "description": "Telegram property-intake bot for DomLivo — parses a photo album + caption into a draft Sanity property",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cyanidium-dev/domlivo-telegram-bot.git"
+  },
+  "homepage": "https://github.com/cyanidium-dev/domlivo-telegram-bot#readme",
   "type": "module",
   "scripts": {
     "test": "vitest run",
