@@ -77,13 +77,15 @@ export function draftContentFields(input: DraftContentInput): Record<string, unk
  */
 export function buildDraft(input: DraftInput, uuid: string): Record<string, unknown> {
   const {parsed, agentId, assetIds} = input
-  const titleEn = parsed.editorial.title.en
+  const titleEn = parsed.editorial.title?.en ?? ''
+  // An empty English title slugifies to "" — Sanity would store a blank URL.
+  const slugCurrent = slugify(titleEn) || 'listing'
 
   const doc: Record<string, unknown> = {
     _id: `drafts.property-tg-${uuid}`,
     _type: 'property',
     ...draftContentFields(input),
-    slug: {_type: 'slug', current: slugify(titleEn)},
+    slug: {_type: 'slug', current: slugCurrent},
     agent: ref(agentId),
     isPublished: false,
     lifecycleStatus: 'draft',
@@ -95,7 +97,7 @@ export function buildDraft(input: DraftInput, uuid: string): Record<string, unkn
       _type: 'image',
       _key: `tg-${i}`,
       asset: ref(assetId),
-      alt: `${titleEn} — photo ${i + 1}`,
+      alt: `${titleEn.trim() || 'Untitled listing'} — photo ${i + 1}`,
     }))
   }
 

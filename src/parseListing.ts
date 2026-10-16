@@ -2,6 +2,7 @@ import {log, errInfo} from './log.js'
 import type {ParsedListing} from './types.js'
 import {DEFAULT_LOCALES, localeLabels, localeObjectSchema} from './locales.js'
 import {scrubEditorial} from './scrubContacts.js'
+import {completeEditorial} from './completeEditorial.js'
 
 export const MODEL = 'claude-sonnet-5'
 
@@ -134,6 +135,13 @@ export async function parseListing(
       return null
     }
     const parsed = tool.input as ParsedListing
+    // The schema asks for every locale, but tool input is not strict, so a
+    // missing title object used to throw on `.en` and drop the listing.
+    const filled = completeEditorial(parsed.editorial, locales)
+    if (filled.incomplete.length > 0) {
+      log('warn', 'parse_editorial_incomplete', {fields: filled.incomplete, source: 'intake'})
+    }
+    parsed.editorial = filled.editorial as ParsedListing['editorial']
     // The prompt forbids contact details; this is the part that guarantees it.
     const scrub = scrubEditorial(parsed.editorial)
     parsed.editorial = scrub.editorial

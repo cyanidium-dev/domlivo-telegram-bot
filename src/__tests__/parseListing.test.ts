@@ -1,4 +1,4 @@
-import {describe, it, expect} from 'vitest'
+import {describe, it, expect, vi} from 'vitest'
 import {parseListing, LISTING_SCHEMA, type AnthropicLike} from '../parseListing.js'
 
 const recordedInput = {
@@ -37,6 +37,25 @@ describe('parseListing', () => {
     const r = await parseListing(client, 'Shitet 2+1 ...', 3)
     expect(r?.facts.price?.amount).toBe(59000)
     expect(r?.editorial.title.en).toMatch(/Parrucë/)
+  })
+
+  it('fills a missing title with empty locales and logs the gap', async () => {
+    const input = structuredClone(recordedInput)
+    delete (input.editorial as {title?: unknown}).title
+    const logs: string[] = []
+    const spy = vi.spyOn(console, 'log').mockImplementation((line?: unknown) => {
+      logs.push(String(line))
+    })
+    const client: AnthropicLike = {
+      messages: {
+        create: async () => ({content: [{type: 'tool_use', id: 't1', name: 'record_listing', input}]}),
+      },
+    }
+    const r = await parseListing(client, 'Shitet 2+1 ...', 3)
+    spy.mockRestore()
+    expect(r?.editorial.title).toEqual({en: '', uk: '', ru: '', sq: '', it: ''})
+    expect(r?.editorial.shortDescription.en).toBe('x')
+    expect(logs.some((l) => l.includes('"event":"parse_editorial_incomplete"') && l.includes('title'))).toBe(true)
   })
 
   it('returns null (never throws) on API failure', async () => {

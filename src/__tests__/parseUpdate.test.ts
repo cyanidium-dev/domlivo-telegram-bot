@@ -47,6 +47,40 @@ describe('parseUpdate', () => {
     expect(userMsg).toContain('bedrooms') // missing list included
   })
 
+  it('fills a partial title and drops a blank one so the current title survives', async () => {
+    const partial = await parseUpdate(
+      fakeClient({
+        facts: emptyFacts,
+        editorial: {title: {en: 'Sea view apartment'}},
+        parserNotes: '',
+      }),
+      'call it Sea view apartment',
+      current,
+      ['title'],
+      0,
+    )
+    expect(partial?.editorial?.title).toEqual({
+      en: 'Sea view apartment',
+      uk: '',
+      ru: '',
+      sq: '',
+      it: '',
+    })
+
+    const blank = await parseUpdate(
+      fakeClient({
+        facts: emptyFacts,
+        editorial: {title: {}},
+        parserNotes: '',
+      }),
+      'nothing useful',
+      current,
+      [],
+      0,
+    )
+    expect(blank?.editorial).toBeNull()
+  })
+
   it('returns null when the call fails', async () => {
     const client: AnthropicLike = {
       messages: {

@@ -2,6 +2,7 @@ import {log, errInfo} from './log.js'
 import type {ParsedFacts, LocaleMap} from './types.js'
 import {MODEL, FACTS_SCHEMA, type AnthropicLike} from './parseListing.js'
 import {DEFAULT_LOCALES, localeLabels, localeObjectSchema} from './locales.js'
+import {completeUpdateEditorial} from './completeEditorial.js'
 
 export type UpdateEditorial = Partial<{
   title: LocaleMap
@@ -85,7 +86,13 @@ export async function parseUpdate(
       log('error', 'parse_update_no_tool_use', {contentTypes: msg.content.map((b) => b.type)})
       return null
     }
-    return tool.input as UpdateParse
+    const parsed = tool.input as UpdateParse
+    const filled = completeUpdateEditorial(parsed.editorial, locales)
+    if (filled.incomplete.length > 0) {
+      log('warn', 'parse_editorial_incomplete', {fields: filled.incomplete, source: 'update'})
+    }
+    parsed.editorial = filled.editorial as UpdateParse['editorial']
+    return parsed
   } catch (e) {
     log('error', 'parse_update_failed', {answerLength: answer.length, ...errInfo(e)})
     return null

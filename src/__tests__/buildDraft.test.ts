@@ -76,6 +76,28 @@ describe('buildDraft', () => {
     })
   })
 
+  it('mints the slug listing when the English title is empty', () => {
+    const doc = buildDraft(
+      {
+        parsed: {
+          ...parsed,
+          editorial: {
+            ...parsed.editorial,
+            title: {en: '', uk: '', ru: '', sq: '', it: ''},
+          },
+        },
+        refs,
+        validation,
+        agentId: 'agent-1',
+        assetIds: ['img-1'],
+      },
+      'u4',
+    )
+    expect(doc.slug).toEqual({_type: 'slug', current: 'listing'})
+    const gallery = doc.gallery as Array<Record<string, unknown>>
+    expect(gallery[0]?.alt).toBe('Untitled listing — photo 1')
+  })
+
   it('omits what is unknown instead of writing empty values', () => {
     const bare = buildDraft(
       {
