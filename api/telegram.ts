@@ -7,6 +7,8 @@ import {log, errInfo} from '../src/log.js'
 import {
   extractIncoming,
   extractCallback,
+  extractChatMessage,
+  extractChatCallback,
   type TgUpdate,
   type Incoming,
   type IncomingCallback,
@@ -37,6 +39,10 @@ import {
   type StartReviewArgs,
 } from '../src/review.js'
 import {loadReview, clearReview} from '../src/reviewState.js'
+import {handleChatMessage, handleChatCallback, type CommanderDeps} from '../src/commander/handle.js'
+import {parseCommanderChats} from '../src/commander/chats.js'
+import {parseIntent} from '../src/commander/intent.js'
+import {makeTranscriber} from '../src/commander/stt.js'
 
 const GROUP_DEBOUNCE_MS = 3000
 
@@ -65,6 +71,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const headerSecret = req.headers['x-telegram-bot-api-secret-token']
   if (headerSecret !== cfg.config.webhookSecret) {
     log('warn', 'bad_webhook_secret', {got: typeof headerSecret})
+    res.status(200).json({ok: true})
+    return
+  }
+
+  // Groups and channels belong to the commander; private chats stay with intake.
+  const chatMsg = update ? extractChatMessage(update) : null
+  const chatCb = update ? extractChatCallback(update) : null
+  if (chatMsg || chatCb) {
+    const telegramCm = new Telegram(cfg.config.telegramToken)
+    const deps = buildCommanderDeps(cfg.config, telegramCm)
+    const updateId = (chatMsg ?? chatCb)!.updateId
+    const chatId = (chatMsg ?? chatCb)!.chatId
+    try {
+      if (!(await isDuplicate(deps.redis, updateId))) {
+        // Answer Telegram first; the work (model call, Sanity) runs after the 200.
+        waitUntil(
+          (chatCb ? handleChatCallback(chatCb, deps) : handleChatMessage(chatMsg!, deps)).catch(async (e) => {
+            log('error', 'commander_failed', {updateId, chatId, ...errInfo(e)})
+            if (chatCb) await telegramCm.answerCallbackQuery(chatCb.callbackId)
+          }),
+        )
+      } else if (chatCb) {
+        await telegramCm.answerCallbackQuery(chatCb.callbackId)
+      }
+    } catch (e) {
+      log('error', 'commander_failed', {updateId, chatId, ...errInfo(e)})
+    }
     res.status(200).json({ok: true})
     return
   }
@@ -141,6 +174,27 @@ function buildReviewDeps(config: BotConfig, telegram: Telegram, idleKeyboard: st
       parseUpdate(anthropic, answer, current, missingLbls, newPhotos),
     studioBaseUrl: config.studioBaseUrl,
     idleKeyboard,
+  }
+}
+
+function buildCommanderDeps(config: BotConfig, telegram: Telegram): CommanderDeps {
+  const sanity = createClient({
+    projectId: config.sanity.projectId,
+    dataset: config.sanity.dataset,
+    apiVersion: config.sanity.apiVersion,
+    token: config.sanity.token,
+    useCdn: false,
+  })
+  const anthropic = new Anthropic({apiKey: config.anthropicApiKey}) as unknown as AnthropicLike
+  return {
+    redis: makeRedis(config.upstash),
+    // Structural narrowing, same as buildReviewDeps.
+    sanity: sanity as unknown as CommanderDeps['sanity'],
+    telegram,
+    rules: parseCommanderChats(process.env.COMMANDER_CHATS),
+    parseIntent: (command, replied) => parseIntent(anthropic, command, replied),
+    transcribe: makeTranscriber(process.env),
+    now: () => new Date(),
   }
 }
 

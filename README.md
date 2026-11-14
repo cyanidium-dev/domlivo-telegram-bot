@@ -41,14 +41,48 @@ The webhook always returns 200 so Telegram never retry-storms.
 | `SANITY_PROJECT_ID` | no (default `g4aqp6ex`) | override only for a different project |
 | `SANITY_DATASET` | no (default `production`) | override only for a test dataset |
 
+| `COMMANDER_CHATS` | for the commander | JSON list of partner chats and the only Telegram ids allowed to command there, see below |
+| `ELEVENLABS_API_KEY` | for voice commands | elevenlabs.io → Developers → API Keys (Speech to Text). Without it voice gets "text only" |
+| `ELEVENLABS_STT_MODEL` | no (default `scribe_v2`) | override the Scribe model |
+
 All secrets live on the Vercel project. Behavioral config (`botEnabled`
 kill-switch, `botOwnerTelegramUserId`, `botDefaultAgent`, `siteBaseUrl`,
 `botAllowPublish` publish kill-switch, per-agent `telegramUserId`) lives in
 Sanity Site Settings / Agent documents.
 
-The webhook must be registered with `allowed_updates: ['message',
+The webhook must be registered with `allowed_updates: ['message', 'channel_post',
 'callback_query']` (the set-webhook script does this) — inline buttons stay
 dead until `npm run set-webhook` has been re-run after the review-flow deploy.
+
+## Commander (partner chats)
+
+In the partner lead chats the same bot changes existing listings on command,
+typed or by voice: sold, rented, hide, back on the site, new price, find, undo,
+journal. It acts only when addressed (`бот, …`, `@mention`, a reply to its own
+message), only for the Telegram ids listed for that chat, and only on that
+chat's listings; every change goes through a photo card with ✅ / ❌ and ends
+with a ↩️ undo button. It never deletes: sold/rented set `lifecycleStatus`,
+hide sets `isPublished: false`, price sets `price` and adds a `priceHistory`
+row — all existing fields. Journal and undo snapshots live in Redis
+(`cm:journal:<day>`, 400 days). Code: `src/commander/`.
+
+```json
+[
+  {"chat": -100111, "label": "Domlivo × Cactus", "users": [ALES_ID, PAVEL_ID], "scope": ["agent-cactus"]},
+  {"chat": -100222, "label": "Domlivo × Grinchenko", "users": [FEDIR_ID, VIKTOR_ID], "scope": "general"}
+]
+```
+
+`scope`: a list of agent `_id`s, `"general"` (listings whose agent has no
+`telegramLeadChatId`, i.e. whose leads land in the main chat) or `"all"`.
+`/id@<bot>` in a chat prints the chat id and the sender's id.
+
+Setup: @BotFather → `/setprivacy` → Disable (so voice notes reach the bot),
+then remove and re-add the bot to the group. In a channel the bot must be an
+admin; channel posts carry no author id, so a post counts only while every
+human admin of the channel is on its `users` list, and button presses are
+checked by the presser's id. Re-run `npm run set-webhook` once: the commander
+needs `channel_post` updates.
 
 ## Deploy
 
