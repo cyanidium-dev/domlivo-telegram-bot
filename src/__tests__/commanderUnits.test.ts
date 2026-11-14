@@ -2,40 +2,11 @@ import {describe, it, expect} from 'vitest'
 import {parseCommanderChats, ruleFor, isAllowedUser, channelAdminsTrusted} from '../commander/chats.js'
 import {detectAddressing} from '../commander/addressing.js'
 import {slugsFromText, cleanRef, normalizePrice, parseIntent} from '../commander/intent.js'
-import {rankListings, normName, inScope, filtersEmpty, type ListingRow} from '../commander/find.js'
+import {rankListings, normName, inScope, filtersEmpty} from '../commander/find.js'
+import {row} from './fixtures/listing.js'
 import {planChange, patchOps, undoOps} from '../commander/actions.js'
 import {extractChatMessage, extractChatCallback, extractIncoming} from '../telegram/extract.js'
 
-export function row(over: Partial<ListingRow> = {}): ListingRow {
-  return {
-    _id: 'property-1',
-    _rev: 'rev1',
-    title: '2+1 с видом на море, Плаж',
-    slug: 'apartment-2-1-plazh-durres-78m2',
-    slugRu: 'kvartira-2-1-plazh-durres-78m2',
-    price: 85000,
-    priceUnit: 'total',
-    priceHistory: null,
-    area: 78,
-    bedrooms: 2,
-    rooms: 3,
-    status: 'sale',
-    isPublished: true,
-    lifecycleStatus: 'active',
-    propertyCode: null,
-    createdAt: '2026-09-01T10:00:00Z',
-    agentId: 'agent-cactus',
-    agentName: 'Cactus Real Estate',
-    agentHasLeadChat: true,
-    cityNames: ['Durrës', 'Дуррес', 'durres'],
-    districtNames: ['Plazh', 'Плаж', 'plazh'],
-    city: 'Дуррес',
-    district: 'Плаж',
-    photo: 'https://cdn.sanity.io/images/x/production/a.jpg',
-    hasDraft: false,
-    ...over,
-  }
-}
 
 const noFilters = {city: null, district: null, bedrooms: null, rooms: null, price: null, areaM2: null, dealType: null}
 

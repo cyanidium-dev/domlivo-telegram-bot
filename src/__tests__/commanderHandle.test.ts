@@ -5,7 +5,7 @@ import type {Intent} from '../commander/intent.js'
 import type {ListingRow} from '../commander/find.js'
 import type {RedisLike} from '../assembly.js'
 import type {ChatMessage, ChatCallback} from '../telegram/extract.js'
-import {row} from './commanderUnits.test.js'
+import {row} from './fixtures/listing.js'
 
 const BOT = {id: 555, username: 'domlivo_intake_bot'}
 const CACTUS = -1001
